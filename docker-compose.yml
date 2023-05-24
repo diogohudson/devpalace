@@ -1,0 +1,43 @@
+version: "3"
+volumes:
+  dev_palace_db_data:
+services:
+  api:
+    container_name: dev-palace
+    build:
+      context: .
+      dockerfile: Dockerfile
+    user: root
+    ports:
+      - "8081:8081"
+    command: >
+      sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8081"
+
+    volumes:
+      - ./devpalace:/devpalace
+    environment:
+      # for testing with CI
+      - DB_HOST=db
+      - DB_NAME=app
+      - DB_USER=postgres
+      - DB_PASS=supersecretpassword
+      - AWS_REGION=us-east-1
+      - ENV=local
+    restart: on-failure
+  db:
+    container_name: db
+    image: postgis/postgis:15-3.3
+    environment:
+      - POSTGRES_DB=app
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=supersecretpassword
+    ports:
+      - "6662:5432"
+    volumes:  
+      - dev_palace_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s    
